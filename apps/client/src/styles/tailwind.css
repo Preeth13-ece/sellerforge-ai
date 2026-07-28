@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-forge-bg text-ink-100 font-body antialiased;
+  }
+  html.light body {
+    @apply bg-paper-bg text-ink-900;
+  }
+  h1, h2, h3, h4 { @apply font-display; }
+  ::selection { @apply bg-emerald-500/30; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-emerald-400; }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-forge-surface/70 backdrop-blur-xl border border-forge-border rounded-2xl shadow-glass;
+  }
+  html.light .glass-card {
+    @apply bg-white/80 border-paper-border shadow-glass-sm;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 text-forge-bg font-semibold px-6 py-3 transition-all hover:bg-emerald-400 hover:shadow-glow-emerald active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-forge-border bg-forge-surface2 text-ink-100 font-semibold px-6 py-3 transition-all hover:border-emerald-500/50 active:scale-[0.98];
+  }
+  html.light .btn-secondary {
+    @apply border-paper-border bg-white text-ink-900;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-forge-border bg-forge-surface2 px-4 py-3 text-sm text-ink-100 placeholder:text-ink-500 focus:border-emerald-500/60 focus:outline-none transition-colors;
+  }
+  html.light .input-field {
+    @apply border-paper-border bg-white text-ink-900;
+  }
+  .eyebrow {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-emerald-400;
+  }
+  .seam-divider {
+    @apply h-px w-full bg-seam opacity-40;
+  }
+}
