@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sellerforge-ai.pages.dev/sitemap.xml
+Sitemap: https://sellerforge-ai.onrender.com/sitemap.xml
