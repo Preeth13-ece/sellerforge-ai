@@ -11,26 +11,37 @@ export default function DashboardSubscriptionPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    dashboardApi.mySubscription().then(({ data }) => setSubscription(data.data.subscription)).catch(() => {});
-    dashboardApi.plans().then(({ data }) => setPlans(data.data.plans)).catch(() => {});
+    dashboardApi
+      .mySubscription()
+      .then(({ data }) => setSubscription(data.data.subscription))
+      .catch(() => {});
+
+    dashboardApi
+      .plans()
+      .then(({ data }) => setPlans(data.data.plans))
+      .catch(() => {});
   }, []);
 
   async function handleUpgrade(planId) {
-  console.log("Selected plan:", planId);
+    try {
+      console.log("Selected plan:", planId);
 
-  try {
-    const { data } = await dashboardApi.checkout(planId);
-    window.location.href = data.data.url;
-  } catch (err) {
-    showToast(getErrorMessage(err), "error");
+      const { data } = await dashboardApi.checkout(planId);
+
+      window.location.href = data.data.url;
+    } catch (err) {
+      showToast(getErrorMessage(err), "error");
+    }
   }
-}
 
   async function handleCancel() {
     try {
       await dashboardApi.cancelSubscription();
+
       showToast("Subscription cancelled", "success");
+
       const { data } = await dashboardApi.mySubscription();
+
       setSubscription(data.data.subscription);
     } catch (err) {
       showToast(getErrorMessage(err), "error");
@@ -39,7 +50,9 @@ export default function DashboardSubscriptionPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-2xl font-semibold">Subscription</h1>
+      <h1 className="font-display text-2xl font-semibold">
+        Subscription
+      </h1>
 
       {subscription && (
         <SubscriptionCard
@@ -51,21 +64,41 @@ export default function DashboardSubscriptionPage() {
       )}
 
       <div>
-        <h2 className="font-display text-lg font-semibold mb-4">Available plans</h2>
+        <h2 className="font-display text-lg font-semibold mb-4">
+          Available plans
+        </h2>
+
         <div className="grid gap-4 sm:grid-cols-3">
           {plans.map((plan) => (
             <div key={plan.id} className="glass-card p-5">
-              <h3 className="font-semibold capitalize mb-1">{plan.name}</h3>
-              <p className="text-2xl font-display font-semibold mb-1">${plan.priceMonthly}<span className="text-xs text-ink-500">/mo</span></p>
-              <p className="text-xs text-emerald-400 font-mono mb-4">{plan.credits} credits</p>
+
+              <h3 className="font-semibold capitalize mb-1">
+                {plan.name}
+              </h3>
+
+              <p className="text-2xl font-display font-semibold mb-1">
+                ${plan.priceMonthly}
+                <span className="text-xs text-ink-500">
+                  /mo
+                </span>
+              </p>
+
+              <p className="text-xs text-emerald-400 font-mono mb-4">
+                {plan.credits} credits
+              </p>
+
+
               {plan.id !== "free" && (
-                  <Button 
-                    className="w-full text-sm" 
-                     onClick={() => handleUpgrade(plan.name.toLowerCase())}
-                     >
-                   Choose plan
-                  </Button>
-                  )}
+                <Button
+                  className="w-full text-sm"
+                  onClick={() =>
+                    handleUpgrade(plan.name.toLowerCase())
+                  }
+                >
+                  Choose plan
+                </Button>
+              )}
+
             </div>
           ))}
         </div>
