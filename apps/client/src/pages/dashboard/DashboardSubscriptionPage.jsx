@@ -16,13 +16,15 @@ export default function DashboardSubscriptionPage() {
   }, []);
 
   async function handleUpgrade(planId) {
-    try {
-      const { data } = await dashboardApi.checkout(planId);
-      window.location.href = data.data.url;
-    } catch (err) {
-      showToast(getErrorMessage(err), "error");
-    }
+  console.log("Selected plan:", planId);
+
+  try {
+    const { data } = await dashboardApi.checkout(planId);
+    window.location.href = data.data.url;
+  } catch (err) {
+    showToast(getErrorMessage(err), "error");
   }
+}
 
   async function handleCancel() {
     try {
@@ -57,8 +59,13 @@ export default function DashboardSubscriptionPage() {
               <p className="text-2xl font-display font-semibold mb-1">${plan.priceMonthly}<span className="text-xs text-ink-500">/mo</span></p>
               <p className="text-xs text-emerald-400 font-mono mb-4">{plan.credits} credits</p>
               {plan.id !== "free" && (
-                <Button className="w-full text-sm" onClick={() => handleUpgrade(plan.id)}>Choose plan</Button>
-              )}
+                  <Button 
+                    className="w-full text-sm" 
+                     onClick={() => handleUpgrade(plan.name.toLowerCase())}
+                     >
+                   Choose plan
+                  </Button>
+                  )}
             </div>
           ))}
         </div>
