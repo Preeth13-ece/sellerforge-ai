@@ -9,12 +9,19 @@ import {
 
 const router = Router();
 
+// Get all subscription plans
 router.get("/plans", listPlans);
+
+// Create Razorpay subscription
 router.post("/checkout", verifyJWT, createCheckout);
+
+// Get current user's subscription
 router.get("/me", verifyJWT, getMySubscription);
+
+// Cancel current subscription
 router.post("/cancel", verifyJWT, cancelMySubscription);
 
-// Note: the raw webhook route (needs raw body, not JSON-parsed) is mounted
-// separately in app.js BEFORE the global json() body parser.
+// Note: The Razorpay webhook route is mounted separately in app.js
+// before express.json() so it can receive the raw request body.
 
 export default router;
