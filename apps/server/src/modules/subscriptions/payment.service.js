@@ -384,6 +384,12 @@ export async function cancelSubscription(
 
   }
 
+console.log("Razorpay Config:", {
+  keyId: env.razorpay.keyId,
+  keySecret: env.razorpay.keySecret ? "FOUND" : "MISSING",
+  planPro: env.razorpay.planPro,
+  planBusiness: env.razorpay.planBusiness
+});
 
 
   const razorpay =
