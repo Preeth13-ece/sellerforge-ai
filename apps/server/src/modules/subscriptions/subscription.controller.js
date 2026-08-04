@@ -10,7 +10,8 @@ export const listPlans = asyncHandler(async (req, res) => {
     200,
     {
       plans: paymentService.PLANS,
-    }
+    },
+    "Plans fetched successfully"
   ).send(res);
 
 });
@@ -19,7 +20,28 @@ export const listPlans = asyncHandler(async (req, res) => {
 
 export const createCheckout = asyncHandler(async (req, res) => {
 
+  console.log("========== RAZORPAY CHECKOUT ==========");
+
+  console.log("User:", req.user);
+
+  console.log("Request body:", req.body);
+
+
+
+  if (!req.user) {
+
+    throw new Error("User not authenticated");
+
+  }
+
+
+
   const { planId } = req.body;
+
+
+
+  console.log("Selected plan:", planId);
+
 
 
   const subscription =
@@ -27,6 +49,14 @@ export const createCheckout = asyncHandler(async (req, res) => {
       req.user,
       planId
     );
+
+
+
+  console.log(
+    "Razorpay subscription created:",
+    subscription.id
+  );
+
 
 
   return new ApiResponse(
@@ -42,7 +72,13 @@ export const createCheckout = asyncHandler(async (req, res) => {
 
 
 
+
 export const razorpayWebhook = asyncHandler(async (req, res) => {
+
+
+  console.log(
+    "Razorpay webhook received"
+  );
 
 
   const result =
@@ -57,6 +93,7 @@ export const razorpayWebhook = asyncHandler(async (req, res) => {
 
 
 });
+
 
 
 
@@ -86,6 +123,7 @@ export const getMySubscription = asyncHandler(async (req, res) => {
 
 
 });
+
 
 
 

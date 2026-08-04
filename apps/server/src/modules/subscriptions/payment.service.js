@@ -1,6 +1,8 @@
 import Razorpay from "razorpay";
+
 import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/ApiError.js";
+
 import { User } from "../users/user.model.js";
 import { Subscription } from "./subscription.model.js";
 
@@ -8,33 +10,58 @@ import { Subscription } from "./subscription.model.js";
 let razorpayClient = null;
 
 
-// -------------------------
-// Razorpay Client
-// -------------------------
 
-function getRazorpay() {
+function getRazorpay(){
 
-  if (
+
+  console.log("Razorpay Config:",{
+
+    keyId:
+      env.razorpay.keyId,
+
+    secret:
+      env.razorpay.keySecret
+        ? "FOUND"
+        : "MISSING",
+
+    planPro:
+      env.razorpay.planPro,
+
+    planBusiness:
+      env.razorpay.planBusiness
+
+  });
+
+
+
+  if(
     !env.razorpay.keyId ||
     !env.razorpay.keySecret
-  ) {
+  ){
+
     throw ApiError.internal(
-      "Razorpay is not configured."
+      "Razorpay credentials missing"
     );
-  }
-
-
-  if (!razorpayClient) {
-
-    razorpayClient = new Razorpay({
-
-      key_id: env.razorpay.keyId,
-
-      key_secret: env.razorpay.keySecret,
-
-    });
 
   }
+
+
+
+  if(!razorpayClient){
+
+    razorpayClient =
+      new Razorpay({
+
+        key_id:
+          env.razorpay.keyId,
+
+        key_secret:
+          env.razorpay.keySecret
+
+      });
+
+  }
+
 
 
   return razorpayClient;
@@ -43,307 +70,160 @@ function getRazorpay() {
 
 
 
-// -------------------------
-// Plans
-// -------------------------
-
-export const PLANS = [
-
-  {
-    id: "free",
-
-    name: "Free",
-
-    priceMonthly: 0,
-
-    credits: env.credits.free,
-
-  },
 
 
-  {
-    id: "pro",
-
-    name: "Pro",
-
-    priceMonthly: 19,
-
-    credits: env.credits.pro,
-
-    razorpayPlanId:
-      env.razorpay.planPro,
-
-  },
+export const PLANS=[
 
 
-  {
-    id: "business",
+{
+ id:"free",
+ name:"Free",
+ priceMonthly:0,
+ credits:env.credits.free
+},
 
-    name: "Business",
 
-    priceMonthly: 49,
+{
+ id:"pro",
+ name:"Pro",
+ priceMonthly:19,
+ credits:env.credits.pro,
+ razorpayPlanId:
+   env.razorpay.planPro
+},
 
-    credits: env.credits.business,
 
-    razorpayPlanId:
-      env.razorpay.planBusiness,
+{
+ id:"business",
+ name:"Business",
+ priceMonthly:49,
+ credits:env.credits.business,
+ razorpayPlanId:
+   env.razorpay.planBusiness
+}
 
-  },
 
 ];
 
 
 
 
-// -------------------------
-// Create Razorpay Subscription
-// -------------------------
+
 
 export async function createCheckoutSession(
-  user,
-  planId
-) {
+ user,
+ planId
+){
 
 
-  const plan =
-    PLANS.find(
-      (p) => p.id === planId
-    );
+ console.log(
+   "Creating checkout for:",
+   user?._id,
+   planId
+ );
 
 
-  if (!plan) {
+ if(!user){
 
-    throw ApiError.badRequest(
-      "Invalid plan selected"
-    );
+   throw ApiError.unauthorized(
+     "Login required"
+   );
 
-  }
+ }
 
 
 
-  if (!plan.razorpayPlanId) {
+ const plan =
+   PLANS.find(
+    p=>p.id===planId
+   );
 
-    throw ApiError.badRequest(
-      "Razorpay plan ID missing"
-    );
 
-  }
 
+ if(!plan){
 
+   throw ApiError.badRequest(
+     "Invalid plan selected"
+   );
 
-  const razorpay = getRazorpay();
+ }
 
 
 
-  const subscription =
-    await razorpay.subscriptions.create({
+ if(!plan.razorpayPlanId){
 
-      plan_id:
-        plan.razorpayPlanId,
+   throw ApiError.badRequest(
+     "Razorpay plan ID missing"
+   );
 
+ }
 
-      customer_notify: 1,
 
 
-      total_count: 1200,
+ const razorpay =
+   getRazorpay();
 
 
-      notes: {
 
-        userId:
-          user._id.toString(),
 
+ try{
 
-        planId,
 
+ const subscription =
+ await razorpay.subscriptions.create({
 
-        userName:
-          user.name || "",
 
-      },
+   plan_id:
+     plan.razorpayPlanId,
 
 
-    });
+   customer_notify:1,
 
 
+   total_count:1200,
 
-  return subscription;
 
-}
+   notes:{
 
 
+    userId:
+      user._id.toString(),
 
 
-// -------------------------
-// Razorpay Webhook
-// -------------------------
+    planId,
 
-export async function handleWebhookEvent(
-  event
-) {
 
+    userName:
+      user.name || ""
 
-  switch(event.event) {
+   }
 
 
+ });
 
-    case "subscription.charged": {
 
 
-      const subscription =
-        event.payload.subscription.entity;
+ return subscription;
 
 
 
-      const userId =
-        subscription.notes?.userId;
+ }catch(error){
 
 
+ console.error(
+   "Razorpay Error:",
+   error
+ );
 
-      const planId =
-        subscription.notes?.planId;
 
+ throw ApiError.internal(
+   error.message
+ );
 
 
-      if (
-        userId &&
-        planId
-      ) {
+ }
 
 
-        await User.findByIdAndUpdate(
-
-          userId,
-
-          {
-
-            plan: planId,
-
-
-            "credits.limit":
-              env.credits[planId] ??
-              env.credits.free,
-
-          }
-
-        );
-
-
-
-        await Subscription.findOneAndUpdate(
-
-          {
-            userId,
-          },
-
-
-          {
-
-            plan: planId,
-
-
-            providerCustomerId:
-              subscription.customer_id,
-
-
-            providerSubscriptionId:
-              subscription.id,
-
-
-            status:
-              "active",
-
-          },
-
-
-          {
-            upsert: true,
-          }
-
-        );
-
-
-      }
-
-
-      break;
-
-    }
-
-
-
-
-    case "subscription.cancelled": {
-
-
-      const subscription =
-        event.payload.subscription.entity;
-
-
-
-      const record =
-        await Subscription.findOne({
-
-          providerSubscriptionId:
-            subscription.id,
-
-        });
-
-
-
-      if(record) {
-
-
-        record.status =
-          "canceled";
-
-
-        record.plan =
-          "free";
-
-
-        await record.save();
-
-
-
-        await User.findByIdAndUpdate(
-
-          record.userId,
-
-          {
-
-            plan:
-              "free",
-
-
-            "credits.limit":
-              env.credits.free,
-
-          }
-
-        );
-
-      }
-
-
-      break;
-
-    }
-
-
-
-
-    default:
-
-      break;
-
-  }
-
-
-
-  return {
-    received:true,
-  };
 
 }
 
@@ -351,87 +231,228 @@ export async function handleWebhookEvent(
 
 
 
-// -------------------------
-// Cancel Subscription
-// -------------------------
-
-export async function cancelSubscription(
-  user
-) {
 
 
-  const record =
-    await Subscription.findOne({
+export async function handleWebhookEvent(event){
 
-      userId:
-        user._id,
 
-    });
+ console.log(
+   "Webhook event:",
+   event.event
+ );
 
 
 
-  if(
-    !record ||
-    !record.providerSubscriptionId
-  ) {
+ switch(event.event){
 
 
-    throw ApiError.badRequest(
+ case "subscription.charged":{
 
-      "No active subscription to cancel"
 
-    );
+ const subscription =
+ event.payload.subscription.entity;
 
-  }
 
-console.log("Razorpay Config:", {
-  keyId: env.razorpay.keyId,
-  keySecret: env.razorpay.keySecret ? "FOUND" : "MISSING",
-  planPro: env.razorpay.planPro,
-  planBusiness: env.razorpay.planBusiness
+
+ const userId =
+ subscription.notes?.userId;
+
+
+
+ const planId =
+ subscription.notes?.planId;
+
+
+
+ if(userId && planId){
+
+
+ await User.findByIdAndUpdate(
+
+ userId,
+
+ {
+
+ plan:planId,
+
+ "credits.limit":
+ env.credits[planId] ??
+ env.credits.free
+
+ }
+
+ );
+
+
+
+ await Subscription.findOneAndUpdate(
+
+ {
+ userId
+ },
+
+ {
+
+ plan:planId,
+
+ providerSubscriptionId:
+ subscription.id,
+
+ status:"active"
+
+ },
+
+ {
+ upsert:true
+ }
+
+ );
+
+
+ }
+
+
+ break;
+
+ }
+
+
+
+
+ case "subscription.cancelled":{
+
+
+ const subscription =
+ event.payload.subscription.entity;
+
+
+
+ const record =
+ await Subscription.findOne({
+
+ providerSubscriptionId:
+ subscription.id
+
+ });
+
+
+
+ if(record){
+
+
+ record.status="canceled";
+
+ record.plan="free";
+
+
+ await record.save();
+
+
+ await User.findByIdAndUpdate(
+
+ record.userId,
+
+ {
+
+ plan:"free",
+
+ "credits.limit":
+ env.credits.free
+
+ }
+
+ );
+
+
+ }
+
+
+
+ break;
+
+ }
+
+
+
+ default:
+ break;
+
+
+ }
+
+
+
+ return {
+ received:true
+ };
+
+
+}
+
+
+
+
+
+
+
+export async function cancelSubscription(user){
+
+
+const record =
+await Subscription.findOne({
+
+userId:user._id
+
 });
 
 
-  const razorpay =
-    getRazorpay();
+
+if(!record){
+
+ throw ApiError.badRequest(
+ "No subscription found"
+ );
+
+}
 
 
 
-  await razorpay.subscriptions.cancel(
-
-    record.providerSubscriptionId
-
-  );
+const razorpay =
+getRazorpay();
 
 
 
-  record.status =
-    "canceled";
+await razorpay.subscriptions.cancel(
 
+record.providerSubscriptionId
 
-  record.plan =
-    "free";
-
-
-  await record.save();
+);
 
 
 
-  await User.findByIdAndUpdate(
+record.status="canceled";
 
-    user._id,
-
-    {
-
-      plan:
-        "free",
+record.plan="free";
 
 
-      "credits.limit":
-        env.credits.free,
+await record.save();
 
-    }
 
-  );
+
+await User.findByIdAndUpdate(
+
+user._id,
+
+{
+
+plan:"free",
+
+"credits.limit":
+env.credits.free
+
+}
+
+);
+
 
 }
